@@ -1,0 +1,25 @@
+﻿import { z } from 'zod';
+
+export const donationSchema = z.object({
+  title: z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
+  first_name: z.string().min(1, 'กรุณากรอกชื่อ'),
+  last_name: z.string().min(1, 'กรุณากรอกนามสกุล'),
+  email: z.string().email('กรุณากรอกอีเมลที่ถูกต้อง'),
+  phone: z.string().min(10, 'กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง'),
+  birth_date: z.string().min(1, 'กรุณาเลือกวันเกิด'),
+  amount: z.number().min(1, 'กรุณากรอกจำนวนเงินที่ต้องการบริจาค')
+});
+
+export type DonationInput = z.infer<typeof donationSchema>;
+
+export const emailSettingsSchema = z.object({
+  smtp_host: z.string().min(1, 'กรุณากรอก SMTP Host'),
+  smtp_port: z.number().min(1, 'กรุณากรอก SMTP Port'),
+  smtp_user: z.string().email('กรุณากรอกอีเมลที่ถูกต้อง'),
+  smtp_pass: z.string().min(1, 'กรุณากรอกรหัสผ่าน'),
+  from_email: z.string().email('กรุณากรอกอีเมลผู้ส่งที่ถูกต้อง'),
+  from_name: z.string().min(1, 'กรุณากรอกชื่อผู้ส่ง')
+});
+
+export type EmailSettingsInput = z.infer<typeof emailSettingsSchema>;
+

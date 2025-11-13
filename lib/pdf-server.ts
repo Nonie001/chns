@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { Donation } from '@/types/database';
@@ -256,9 +257,11 @@ let browserPromise: Promise<Browser> | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
+    // ตรวจสอบว่าอยู่บน Vercel หรือไม่
+    const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    
     browserPromise = puppeteer.launch({
-      headless: true,
-      args: [
+      args: isVercel ? chromium.args : [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
@@ -266,7 +269,10 @@ async function getBrowser(): Promise<Browser> {
         '--no-first-run',
         '--no-zygote',
         '--disable-gpu'
-      ]
+      ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: isVercel ? await chromium.executablePath() : puppeteer.executablePath(),
+      headless: chromium.headless || true
     });
 
     // ป้องกัน zombie process ถ้าเกิด error

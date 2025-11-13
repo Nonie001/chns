@@ -211,9 +211,18 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
 }
 
 export async function generateServerPDFBuffer(donation: Donation, logoBase64?: string): Promise<Buffer> {
-  const browser = await getBrowser();
-
+  const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  let browser;
+  
   try {
+    // สร้าง browser ใหม่ทุกครั้งบน Vercel เพื่อประหยัด memory
+    if (isVercel) {
+      browser = await launchBrowser();
+    } else {
+      // Local: ใช้ singleton browser เพื่อความเร็ว
+      browser = await getBrowser();
+    }
+
     // Load signer settings
     let signature: SignatureInfo | undefined;
     try {
@@ -238,10 +247,8 @@ export async function generateServerPDFBuffer(donation: Donation, logoBase64?: s
     } catch {}
 
     const page = await browser.newPage();
-    // ลดเวลารอ network ให้เร็วขึ้น เนื่องจากเราไม่มี resource ภายนอกแล้ว
-    page.setDefaultNavigationTimeout(15000);
+    page.setDefaultNavigationTimeout(8000);
     const html = createReceiptHTML(donation, logoBase64, signature);
-    // setContent เร็วกว่า goto data URL ในหลายกรณี และเราไม่ต้องรอ network idle
     await page.setContent(html, { waitUntil: 'domcontentloaded' });
     
     const pdfBuffer = await page.pdf({
@@ -258,46 +265,58 @@ export async function generateServerPDFBuffer(donation: Donation, logoBase64?: s
     await page.close();
     return Buffer.from(pdfBuffer);
   } finally {
-    // เก็บ browser ไว้ reuse รอบถัดไปเพื่อลดเวลา
+    // ปิด browser ทันทีบน Vercel เพื่อคืน memory
+    if (isVercel && browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
   }
 }
 
-// ---------- Browser singleton (reuse instance เพื่อให้เร็วขึ้น) ----------
+// ---------- Browser Management ----------
+// สร้าง browser ใหม่ทุกครั้งสำหรับ Vercel (เพื่อประหยัด memory)
+async function launchBrowser(): Promise<Browser> {
+  const puppeteer = await getPuppeteer();
+  
+  return puppeteer.launch({
+    args: [
+      ...chromium.args,
+      '--single-process',
+      '--no-zygote',
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--disable-setuid-sandbox',
+      '--no-sandbox'
+    ],
+    defaultViewport: { width: 1280, height: 720 },
+    executablePath: await chromium.executablePath(),
+    headless: true
+  }) as Promise<Browser>;
+}
+
+// Browser singleton สำหรับ Local development (reuse เพื่อความเร็ว)
 let browserPromise: Promise<Browser> | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    // ตรวจสอบว่าอยู่บน Vercel หรือไม่
-    const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
     const puppeteer = await getPuppeteer();
     
-    if (isVercel) {
-      // สำหรับ Vercel/Lambda - ใช้ Chromium
-      browserPromise = puppeteer.launch({
-        args: [...chromium.args, '--single-process'],
-        defaultViewport: { width: 1280, height: 720 },
-        executablePath: await chromium.executablePath(),
-        headless: true
-      });
-    } else {
-      // สำหรับ Local - ใช้ Chrome ปกติ
-      browserPromise = puppeteer.launch({
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
-        ],
-        defaultViewport: { width: 1280, height: 720 },
-        executablePath: puppeteer.executablePath(),
-        headless: true
-      });
-    }
+    browserPromise = puppeteer.launch({
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu'
+      ],
+      defaultViewport: { width: 1280, height: 720 },
+      executablePath: puppeteer.executablePath(),
+      headless: true
+    }) as Promise<Browser>;
 
-    // ป้องกัน zombie process ถ้าเกิด error
     browserPromise.catch(() => {
       browserPromise = null;
     });

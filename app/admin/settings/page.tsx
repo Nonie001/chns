@@ -178,25 +178,25 @@ export default function EmailSettingsPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href="/admin"
-              className="text-gray-600 hover:text-gray-900"
+              className="text-gray-600 hover:text-gray-900 flex-shrink-0"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </Link>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">ตั้งค่า Email</h1>
-              <p className="text-gray-600 mt-1">ตั้งค่า Gmail สำหรับส่งใบเสร็จให้ผู้บริจาคอัตโนมัติ</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">ตั้งค่า Email</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">ตั้งค่า Gmail สำหรับส่งใบเสร็จให้ผู้บริจาคอัตโนมัติ</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Form */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg border p-6 md:p-8 relative">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <div className="bg-white rounded-lg border p-4 sm:p-6 md:p-8 relative">
           {/* Saving overlay */}
           {saving && (
             <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center z-10" aria-busy="true" aria-live="polite">
@@ -213,91 +213,91 @@ export default function EmailSettingsPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">
                 ตั้งค่า Gmail สำหรับส่งใบเสร็จ
               </h2>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                     Gmail Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     {...register('from_email')}
                     disabled={locked || saving}
-                    className={`w-full px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="your-email@gmail.com"
                   />
                   {errors.from_email && (
-                    <p className="mt-1.5 text-sm text-red-600">{errors.from_email.message}</p>
+                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">{errors.from_email.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                     Gmail App Password <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="password"
                     {...register('smtp_pass')}
                     disabled={locked || saving}
-                    className={`w-full px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="••••••••••••••••"
                   />
                   {errors.smtp_pass && (
-                    <p className="mt-1.5 text-sm text-red-600">{errors.smtp_pass.message}</p>
+                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">{errors.smtp_pass.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">
                     ชื่อองค์กร <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     {...register('from_name')}
                     disabled={locked || saving}
-                    className={`w-full px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="มูลนิธิการกุศล"
                   />
                   {errors.from_name && (
-                    <p className="mt-1.5 text-sm text-red-600">{errors.from_name.message}</p>
+                    <p className="mt-1.5 text-xs sm:text-sm text-red-600">{errors.from_name.message}</p>
                   )}
                 </div>
               </div>
             </div>
 
             <div className="pt-2">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">ลายเซ็นผู้มีอำนาจลงนาม (สำหรับใบเสร็จ)</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3 sm:mb-4">ลายเซ็นผู้มีอำนาจลงนาม (สำหรับใบเสร็จ)</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">ชื่อผู้ลงนาม</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">ชื่อผู้ลงนาม</label>
                   <input
                     type="text"
                     {...register('signer_name')}
                     disabled={locked || saving}
-                    className={`w-full px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="ชื่อ-นามสกุล"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">ตำแหน่ง</label>
+                  <label className="block text-sm font-medium text-gray-900 mb-1.5 sm:mb-2">ตำแหน่ง</label>
                   <input
                     type="text"
                     {...register('signer_title')}
                     disabled={locked || saving}
-                    className={`w-full px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="เช่น ประธานมูลนิธิ"
                   />
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-4 sm:mt-6">
                 <label className="block text-sm font-medium text-gray-900 mb-2">รูปลายเซ็น (อัพโหลดหรือวาง URL)</label>
-                <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                   <input
                     type="file"
                     accept="image/*"
@@ -306,31 +306,32 @@ export default function EmailSettingsPage() {
                       const f = e.target.files?.[0];
                       if (f) handleSignatureUpload(f);
                     }}
+                    className="text-sm w-full sm:w-auto"
                   />
                   <input
                     type="url"
                     {...register('signature_image_url')}
                     disabled={locked || saving}
-                    className={`flex-1 min-w-[250px] px-4 py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base`}
+                    className={`flex-1 w-full sm:min-w-[250px] px-3 sm:px-4 py-2.5 sm:py-3 ${locked ? 'bg-gray-100' : 'bg-gray-50'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base`}
                     placeholder="https://.../signature.png"
                     onBlur={(e) => setSignaturePreview(e.target.value || null)}
                   />
                 </div>
                 {signaturePreview && (
                   <div className="mt-3">
-                    <p className="text-sm text-gray-700 mb-2">ตัวอย่างลายเซ็น:</p>
-                    <img src={signaturePreview} alt="signature" className="h-16 object-contain" />
+                    <p className="text-xs sm:text-sm text-gray-700 mb-2">ตัวอย่างลายเซ็น:</p>
+                    <img src={signaturePreview} alt="signature" className="h-12 sm:h-16 object-contain" />
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                <Lightbulb className="w-5 h-5" />
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+              <h3 className="font-medium text-blue-900 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>วิธีสร้าง Gmail App Password (ละเอียด)</span>
               </h3>
-              <div className="text-sm text-blue-800 space-y-2">
+              <div className="text-xs sm:text-sm text-blue-800 space-y-2">
                 <p className="mb-2">App Password คือรหัส 16 ตัวอักษรที่ Google อนุญาตให้ใช้กับแอป/ระบบอัตโนมัติ แทนรหัสผ่านปกติ</p>
                 <ol className="list-decimal pl-5 space-y-1">
                   <li>
@@ -375,7 +376,7 @@ export default function EmailSettingsPage() {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-3 sm:gap-4 pt-4">
               {locked ? (
                 <>
                   <button
@@ -384,7 +385,7 @@ export default function EmailSettingsPage() {
                       const ok = confirm('ต้องการแก้ไข/ตั้งค่าใหม่หรือไม่?');
                       if (ok) setLocked(false);
                     }}
-                    className="flex-1 bg-gray-700 text-white py-4 px-6 rounded-lg font-medium text-base hover:bg-gray-800 transition-colors"
+                    className="flex-1 bg-gray-700 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-medium text-sm sm:text-base hover:bg-gray-800 transition-colors"
                   >
                     แก้ไขการตั้งค่า
                   </button>
@@ -393,16 +394,17 @@ export default function EmailSettingsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 bg-green-600 text-white py-4 px-6 rounded-lg font-medium text-base hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 bg-green-600 text-white py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-medium text-sm sm:text-base hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                      กำลังบันทึก...
+                      <Loader2 className="animate-spin mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      <span className="hidden sm:inline">กำลังบันทึก...</span>
+                      <span className="sm:hidden">บันทึก...</span>
                     </>
                   ) : (
                     <>
-                      <Save className="w-5 h-5 mr-2" />
+                      <Save className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       บันทึกการตั้งค่า
                     </>
                   )}

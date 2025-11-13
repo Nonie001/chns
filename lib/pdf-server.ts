@@ -260,20 +260,31 @@ async function getBrowser(): Promise<Browser> {
     // ตรวจสอบว่าอยู่บน Vercel หรือไม่
     const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
     
-    browserPromise = puppeteer.launch({
-      args: isVercel ? chromium.args : [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
-      ],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: isVercel ? await chromium.executablePath() : puppeteer.executablePath(),
-      headless: chromium.headless || true
-    });
+    if (isVercel) {
+      // สำหรับ Vercel/Lambda - ใช้ Chromium
+      browserPromise = puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: { width: 1280, height: 720 },
+        executablePath: await chromium.executablePath(),
+        headless: true
+      });
+    } else {
+      // สำหรับ Local - ใช้ Chrome ปกติ
+      browserPromise = puppeteer.launch({
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu'
+        ],
+        defaultViewport: { width: 1280, height: 720 },
+        executablePath: puppeteer.executablePath(),
+        headless: true
+      });
+    }
 
     // ป้องกัน zombie process ถ้าเกิด error
     browserPromise.catch(() => {

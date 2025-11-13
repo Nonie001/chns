@@ -1,9 +1,19 @@
-import puppeteer, { Browser } from 'puppeteer-core';
+import type { Browser } from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import type { Donation } from '@/types/database';
 import { supabaseAdmin } from '@/lib/supabase';
+
+// Dynamic imports based on environment
+const getPuppeteer = async () => {
+  const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  if (isVercel) {
+    return await import('puppeteer-core');
+  } else {
+    return await import('puppeteer');
+  }
+};
 
 // แปลงจำนวนเงินเป็นข้อความภาษาไทย สำหรับระบุในใบเสร็จ (เหมาะกับเอกสารทางการ/ยื่นภาษี)
 function thaiBahtText(amount: number): string {
@@ -259,6 +269,7 @@ async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
     // ตรวจสอบว่าอยู่บน Vercel หรือไม่
     const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    const puppeteer = await getPuppeteer();
     
     if (isVercel) {
       // สำหรับ Vercel/Lambda - ใช้ Chromium

@@ -274,7 +274,7 @@ async function getBrowser(): Promise<Browser> {
     if (isVercel) {
       // สำหรับ Vercel/Lambda - ใช้ Chromium
       browserPromise = puppeteer.launch({
-        args: chromium.args,
+        args: [...chromium.args, '--single-process'],
         defaultViewport: { width: 1280, height: 720 },
         executablePath: await chromium.executablePath(),
         headless: true

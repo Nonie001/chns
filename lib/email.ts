@@ -8,41 +8,39 @@ export async function sendReceiptEmail(
   receiptNo: string
 ): Promise<boolean> {
   try {
-    console.log('=== SENDING EMAIL ===');
-    console.log('Recipient:', recipientEmail);
-    console.log('Name:', recipientName);
-    console.log('Receipt No:', receiptNo);
+    // 1) Try to load email settings from database (configured via Settings page)
+    const { data: dbSettings, error: settingsError } = await supabaseAdmin
+      .from('email_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
 
-    // Get email settings from environment variables
-    const emailSettings = {
-      smtp_host: process.env.SMTP_HOST,
-      smtp_port: parseInt(process.env.SMTP_PORT || '587'),
-      smtp_user: process.env.SMTP_USER,
-      smtp_password: process.env.SMTP_PASSWORD,
-      sender_email: process.env.FROM_EMAIL,
-      sender_name: process.env.FROM_NAME,
+    if (settingsError) {
+      console.warn('Failed to load email settings from DB:', settingsError.message);
+    }
+
+    const resolved = {
+      smtp_host: dbSettings?.smtp_host || process.env.SMTP_HOST,
+      smtp_port: dbSettings?.smtp_port || parseInt(process.env.SMTP_PORT || '587'),
+      smtp_user: dbSettings?.smtp_user || process.env.SMTP_USER,
+      smtp_password: dbSettings?.smtp_password || process.env.SMTP_PASSWORD,
+      sender_email: dbSettings?.sender_email || process.env.FROM_EMAIL,
+      sender_name: dbSettings?.sender_name || process.env.FROM_NAME,
     };
 
-    if (!emailSettings.smtp_host || !emailSettings.smtp_user || !emailSettings.smtp_password || !emailSettings.sender_email) {
-      console.error('Email settings not configured in environment variables');
+    if (!resolved.smtp_host || !resolved.smtp_user || !resolved.smtp_password || !resolved.sender_email) {
+      console.error('Email settings not configured (DB and ENV both missing)');
       throw new Error('Email settings not configured');
     }
 
-    console.log('Email settings loaded:', {
-      smtp_host: emailSettings.smtp_host,
-      smtp_port: emailSettings.smtp_port,
-      sender_email: emailSettings.sender_email,
-      sender_name: emailSettings.sender_name
-    });
-
     // Create nodemailer transporter with fallback options
     const transporter = nodemailer.createTransport({
-      host: emailSettings.smtp_host,
-      port: 465, // Use port 465 (secure) instead of 587
-      secure: true, // true for 465, false for other ports
+      host: resolved.smtp_host,
+      port: resolved.smtp_port || 587,
+      secure: (resolved.smtp_port || 587) === 465, // true for 465, false for others
       auth: {
-        user: emailSettings.smtp_user,
-        pass: emailSettings.smtp_password,
+        user: resolved.smtp_user,
+        pass: resolved.smtp_password,
       },
       connectionTimeout: 60000, // 60 seconds
       greetingTimeout: 30000,   // 30 seconds
@@ -50,7 +48,6 @@ export async function sendReceiptEmail(
     });
 
     // Verify transporter with timeout
-    console.log('Verifying email transporter...');
     try {
       await Promise.race([
         transporter.verify(),
@@ -58,14 +55,13 @@ export async function sendReceiptEmail(
           setTimeout(() => reject(new Error('Verification timeout')), 30000)
         )
       ]);
-      console.log('Email transporter verified successfully');
     } catch (verifyError) {
       console.warn('Email verification failed, but continuing...', verifyError);
       // Continue anyway - sometimes verify fails but sending works
     }
 
     // Prepare email content
-    const emailSubject = `ใบเสร็จรับเงินบริจาค - เลขที่ ${receiptNo}`;
+  const emailSubject = `ใบเสร็จรับเงินบริจาค - เลขที่ ${receiptNo}`;
     const emailBody = `
 เรียน คุณ${recipientName}
 
@@ -75,13 +71,12 @@ export async function sendReceiptEmail(
 เลขที่ใบเสร็จ: ${receiptNo}
 
 ขอแสดงความนับถือ
-${emailSettings.sender_name}
+${resolved.sender_name}
     `.trim();
 
     // Send email
-    console.log('Sending email...');
     const info = await transporter.sendMail({
-      from: `"${emailSettings.sender_name}" <${emailSettings.sender_email}>`,
+      from: `"${resolved.sender_name}" <${resolved.sender_email}>`,
       to: recipientEmail,
       subject: emailSubject,
       text: emailBody,
@@ -94,7 +89,6 @@ ${emailSettings.sender_name}
       ],
     });
 
-    console.log('Email sent successfully:', info.messageId);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);

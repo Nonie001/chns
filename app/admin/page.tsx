@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Donation } from '@/types/database';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { downloadPDF } from '@/lib/pdf-generator';
+// Removed client-side pdf-generator; we now use server-rendered PDFs for parity
 import { 
   Eye, 
   Download,
@@ -13,15 +14,19 @@ import {
   RefreshCw,
   Search,
   Trash2,
-  FileText
+  FileText,
+  Settings,
+  LogOut
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminPage() {
+  const router = useRouter();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [filteredDonations, setFilteredDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,6 +36,16 @@ export default function AdminPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDonation, setPreviewDonation] = useState<Donation | null>(null);
+
+  useEffect(() => {
+    // ตรวจสอบ Login ก่อน
+    const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+    if (isLoggedIn !== 'true') {
+      router.replace('/login');
+      return;
+    }
+    fetchDonations();
+  }, [router]);
 
   const fetchDonations = async () => {
     setLoading(true);
@@ -51,9 +66,13 @@ export default function AdminPage() {
     }
   };
 
-  useEffect(() => {
-    fetchDonations();
-  }, []);
+  const handleLogout = () => {
+    if (confirm('ต้องการออกจากระบบหรือไม่?')) {
+      localStorage.removeItem('isAdminLoggedIn');
+      localStorage.removeItem('adminLoginTime');
+      router.push('/login');
+    }
+  };
 
   // Filter และ Search
   useEffect(() => {
@@ -80,7 +99,18 @@ export default function AdminPage() {
 
   const handleDownloadPDF = async (donation: Donation) => {
     try {
-      // โหลด logo เป็น base64
+      // ถ้ามีไฟล์ที่อัปโหลดไว้แล้ว ใช้อันนั้นเลยเพื่อความเร็ว
+      if (donation.pdf_url) {
+        const a = document.createElement('a');
+        a.href = donation.pdf_url;
+        a.download = `receipt-${donation.id.substring(0, 8).toUpperCase()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      // ไม่งั้นให้สร้างจากเซิร์ฟเวอร์ (หน้าตาเหมือนส่งอีเมล 100%) แล้วดาวน์โหลด
       const logoResponse = await fetch('/logo.png');
       const logoBlob = await logoResponse.blob();
       const logoBase64 = await new Promise<string>((resolve) => {
@@ -89,15 +119,30 @@ export default function AdminPage() {
         reader.readAsDataURL(logoBlob);
       });
 
-      // สร้างและดาวน์โหลด PDF พร้อม logo
-      await downloadPDF(donation, logoBase64);
+      const res = await fetch('/api/receipts/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donation, logoBase64 }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Preview API error: ${res.status} ${text}`);
+      }
+      const pdfBlob = await res.blob();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${donation.id.substring(0, 8).toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      // ถ้า error ให้เปิด PDF ที่มีอยู่แทน
       if (donation.pdf_url) {
         window.open(donation.pdf_url, '_blank');
       } else {
-        alert('เกิดข้อผิดพลาดในการสร้าง PDF');
+        alert('เกิดข้อผิดพลาดในการสร้าง/ดาวน์โหลด PDF');
       }
     }
   };
@@ -130,8 +175,8 @@ export default function AdminPage() {
 
   const handlePreviewPDF = async (donation: Donation) => {
     try {
+      setPreviewingId(donation.id);
       setPreviewDonation(donation);
-      
       // โหลด logo เป็น base64
       const logoResponse = await fetch('/logo.png');
       const logoBlob = await logoResponse.blob();
@@ -141,18 +186,25 @@ export default function AdminPage() {
         reader.readAsDataURL(logoBlob);
       });
 
-      // Import pdf-generator dynamically
-      const { generatePDFBlob } = await import('@/lib/pdf-generator');
-      
-      // สร้าง PDF blob
-      const pdfBlob = await generatePDFBlob(donation, logoBase64);
+      // ขอพรีวิว PDF จากเซิร์ฟเวอร์ เพื่อให้หน้าตาเหมือนอีเมล 100%
+      const res = await fetch('/api/receipts/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donation, logoBase64 }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Preview API error: ${res.status} ${text}`);
+      }
+      const pdfBlob = await res.blob();
       const url = URL.createObjectURL(pdfBlob);
-      
       setPdfPreviewUrl(url);
       setShowPreview(true);
     } catch (error) {
       console.error('Error generating preview:', error);
       alert('เกิดข้อผิดพลาดในการสร้างพรีวิว PDF');
+    } finally {
+      setPreviewingId(null);
     }
   };
 
@@ -187,8 +239,22 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="h-8 w-72 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-96 bg-gray-200 rounded animate-pulse mt-3" />
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="p-6 space-y-3 animate-pulse">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-10 bg-gray-200 rounded" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -233,12 +299,26 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex gap-2">
+              <Link
+                href="/admin/settings"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                ตั้งค่า
+              </Link>
               <button
                 onClick={fetchDonations}
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
                 รีเฟรช
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                ออกจากระบบ
               </button>
             </div>
           </div>
@@ -349,10 +429,15 @@ export default function AdminPage() {
                           <>
                             <button
                               onClick={() => handlePreviewPDF(donation)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              disabled={previewingId === donation.id}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title="พรีวิว PDF"
                             >
-                              <FileText className="w-5 h-5" />
+                              {previewingId === donation.id ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <FileText className="w-5 h-5" />
+                              )}
                             </button>
                             <button
                               onClick={() => handleDownloadPDF(donation)}

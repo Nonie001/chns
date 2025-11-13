@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS email_settings (
   smtp_port INTEGER NOT NULL,
   smtp_user VARCHAR(255) NOT NULL,
   smtp_password VARCHAR(255) NOT NULL,
+  -- Optional: ข้อมูลสำหรับใบเสร็จ (ลายเซ็น)
+  signer_name VARCHAR(100),
+  signer_title VARCHAR(100),
+  signature_image_url TEXT,
   email_subject TEXT,
   email_message TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
@@ -117,6 +121,27 @@ DROP POLICY IF EXISTS "Enable update for all users" ON storage.objects;
 CREATE POLICY "Enable update for all users" 
 ON storage.objects FOR UPDATE 
 USING (bucket_id = 'donations');
+
+-- Bucket สำหรับไฟล์ตั้งค่าทั่วไป (เช่น ลายเซ็น)
+-- หมายเหตุ: ต้องสร้าง bucket ชื่อ 'assets' ใน Supabase Storage ก่อน
+
+-- Policy สำหรับอัพโหลดไฟล์ assets
+DROP POLICY IF EXISTS "Enable insert for assets" ON storage.objects;
+CREATE POLICY "Enable insert for assets"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'assets');
+
+-- Policy สำหรับอ่านไฟล์ assets
+DROP POLICY IF EXISTS "Enable read for assets" ON storage.objects;
+CREATE POLICY "Enable read for assets"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'assets');
+
+-- Policy สำหรับอัพเดทไฟล์ assets
+DROP POLICY IF EXISTS "Enable update for assets" ON storage.objects;
+CREATE POLICY "Enable update for assets"
+ON storage.objects FOR UPDATE
+USING (bucket_id = 'assets');
 
 -- ===================================
 -- ข้อมูลทดสอบ (Optional)

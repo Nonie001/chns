@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateServerPDFBuffer } from '@/lib/pdf-server';
 import { sendReceiptEmail } from '@/lib/email';
-import type { Donation, EmailSettings } from '@/types/database';
+import type { Donation } from '@/types/database';
 import fs from 'fs';
 import path from 'path';
 
@@ -58,9 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Email settings are now configured via environment variables
-    const hasEmailConfig = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD;
-    console.log('Email configuration available:', hasEmailConfig);
+  // Email settings will be read from DB (fallback to env inside sendReceiptEmail)
+  console.log('Email settings will be loaded from DB within sendReceiptEmail');
 
     // Load logo as base64
     console.log('Loading logo...');
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
       const logoBuffer = fs.readFileSync(logoPath);
       logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
       console.log('Logo loaded successfully');
-    } catch (error) {
+    } catch {
       console.warn('Logo file not found, generating PDF without logo');
     }
 
@@ -131,28 +130,28 @@ export async function POST(request: NextRequest) {
 
     // Send email with PDF
     let emailSent = false;
-    if (hasEmailConfig) {
-      console.log('Attempting to send email...');
-      try {
-        const receiptId = donationId.substring(0, 8).toUpperCase();
-        const recipientName = `${donation.title} ${donation.first_name} ${donation.last_name}`;
+    console.log('Attempting to send email...');
+    try {
+      const receiptId = donationId.substring(0, 8).toUpperCase();
+      const recipientName = `${donation.title} ${donation.first_name} ${donation.last_name}`;
 
-        const emailResult = await sendReceiptEmail(
-          donation.email,
-          recipientName,
-          pdfBuffer,
-          receiptId
-        );
-        
-        emailSent = emailResult;
-        console.log('Email sent result:', emailResult);
+      const emailResult = await sendReceiptEmail(
+        donation.email,
+        recipientName,
+        pdfBuffer,
+        receiptId
+      );
+      
+      emailSent = emailResult;
+      console.log('Email sent result:', emailResult);
+      if (emailResult) {
         console.log('Email sent successfully to:', donation.email);
-      } catch (emailError) {
-        console.error('Failed to send email:', emailError);
-        // Don't throw - continue with approval even if email fails
+      } else {
+        console.warn('Email not sent (likely missing settings).');
       }
-    } else {
-      console.log('Email configuration not found - skipping email');
+    } catch (emailError) {
+      console.error('Failed to send email:', emailError);
+      // Don't throw - continue with approval even if email fails
     }
 
     console.log('=== APPROVAL COMPLETED SUCCESSFULLY ===');
@@ -161,7 +160,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: emailSent 
         ? 'Donation approved and receipt sent successfully'
-        : 'Donation approved successfully (email not sent)',
+        : 'Donation approved successfully (email not sent - configure email in Settings)',
       emailSent,
       pdfUrl
     });

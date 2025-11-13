@@ -12,8 +12,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.log('Deleting donation:', donationId);
-
     // ลบข้อมูลจาก database
     const { error } = await supabaseAdmin
       .from('donations')
@@ -24,8 +22,6 @@ export async function DELETE(request: NextRequest) {
       console.error('Delete error:', error);
       throw error;
     }
-
-    console.log('Donation deleted successfully');
 
     return NextResponse.json({
       success: true,

@@ -23,6 +23,10 @@ export interface EmailSettings {
   smtp_pass: string;
   from_email: string;
   from_name: string;
+  // Optional receipt/signature settings
+  signer_name?: string;
+  signer_title?: string;
+  signature_image_url?: string;
   created_at: string;
   updated_at: string;
 }

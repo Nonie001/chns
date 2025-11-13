@@ -37,7 +37,7 @@ export default function Home() {
       return;
     }
 
-    setIsSubmitting(true);
+  setIsSubmitting(true);
 
     try {
       // Upload receipt file to Supabase Storage
@@ -114,7 +114,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-4 py-8 md:py-12">
+      <div className="max-w-2xl mx-auto px-4 py-8 md:py-12 relative">
         {/* Header */}
         <div className="mb-8 text-center">
           <img 
@@ -131,6 +131,15 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Overlay while submitting */}
+          {isSubmitting && (
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center z-10 rounded-lg">
+              <div className="flex items-center gap-3 text-gray-700">
+                <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                <span className="font-medium">กำลังอัปโหลดและบันทึกข้อมูล...</span>
+              </div>
+            </div>
+          )}
           {/* คำนำหน้า */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1.5">

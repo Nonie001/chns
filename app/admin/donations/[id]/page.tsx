@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import type { Donation } from '@/types/database';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { downloadPDF } from '@/lib/pdf-generator';
+// Removed client-side pdf-generator; use server-rendered PDF for parity
 import { 
   CheckCircle, 
   XCircle, 
@@ -28,6 +28,16 @@ export default function DonationDetailPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
+  useEffect(() => {
+    // ตรวจสอบ Login ก่อน
+    const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
+    if (isLoggedIn !== 'true') {
+      router.replace('/login');
+      return;
+    }
+    fetchDonation();
+  }, [params.id, router]);
+
   const fetchDonation = async () => {
     setLoading(true);
     try {
@@ -46,10 +56,6 @@ export default function DonationDetailPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchDonation();
-  }, [params.id]);
 
   const handleApprove = async () => {
     if (!donation || !confirm('คุณต้องการอนุมัติการบริจาคนี้ใช่หรือไม่?')) return;
@@ -107,8 +113,19 @@ export default function DonationDetailPage() {
 
   const handleDownloadPDF = async () => {
     if (!donation) return;
-    
     try {
+      // ถ้ามีไฟล์ที่อัปโหลดไว้แล้ว ใช้อันนั้นเลย
+      if (donation.pdf_url) {
+        const a = document.createElement('a');
+        a.href = donation.pdf_url;
+        a.download = `receipt-${donation.id.substring(0, 8).toUpperCase()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      // ไม่งั้น สร้างจากเซิร์ฟเวอร์แล้วดาวน์โหลด
       const logoResponse = await fetch('/logo.png');
       const logoBlob = await logoResponse.blob();
       const logoBase64 = await new Promise<string>((resolve) => {
@@ -117,13 +134,30 @@ export default function DonationDetailPage() {
         reader.readAsDataURL(logoBlob);
       });
 
-      await downloadPDF(donation, logoBase64);
+      const res = await fetch('/api/receipts/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donation, logoBase64 }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Preview API error: ${res.status} ${text}`);
+      }
+      const pdfBlob = await res.blob();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `receipt-${donation.id.substring(0, 8).toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading PDF:', error);
       if (donation.pdf_url) {
         window.open(donation.pdf_url, '_blank');
       } else {
-        alert('เกิดข้อผิดพลาดในการสร้าง PDF');
+        alert('เกิดข้อผิดพลาดในการสร้าง/ดาวน์โหลด PDF');
       }
     }
   };
@@ -148,11 +182,17 @@ export default function DonationDetailPage() {
         reader.readAsDataURL(logoBlob);
       });
 
-      // สร้าง PDF
-      const { generatePDFBlob } = await import('@/lib/pdf-generator');
-      const pdfBlob = await generatePDFBlob(donation, logoBase64);
-      
-      // สร้าง URL สำหรับ preview
+      // ขอพรีวิว PDF จากเซิร์ฟเวอร์ เพื่อให้ตรงกับไฟล์ที่ส่งอีเมล
+      const res = await fetch('/api/receipts/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ donation, logoBase64 }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Preview API error: ${res.status} ${text}`);
+      }
+      const pdfBlob = await res.blob();
       const url = URL.createObjectURL(pdfBlob);
       setPdfPreviewUrl(url);
       setShowPreview(true);
@@ -354,8 +394,17 @@ export default function DonationDetailPage() {
                 disabled={processing}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                <Eye className="w-5 h-5 mr-2" />
-                ดูตัวอย่าง PDF ก่อนอนุมัติ
+                {processing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    กำลังสร้างตัวอย่าง PDF...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-5 h-5 mr-2" />
+                    ดูตัวอย่าง PDF ก่อนอนุมัติ
+                  </>
+                )}
               </button>
 
               {/* Approve/Reject */}

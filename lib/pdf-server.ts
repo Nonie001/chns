@@ -313,7 +313,6 @@ async function getBrowser(): Promise<Browser> {
         '--disable-gpu'
       ],
       defaultViewport: { width: 1280, height: 720 },
-      executablePath: puppeteer.executablePath(),
       headless: true
     }) as Promise<Browser>;
 

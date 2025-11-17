@@ -82,12 +82,13 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-            Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans Thai', Tahoma, sans-serif;
-          background: #fff;
-          color: #222;
-          line-height: 1.5;
-          font-size: 13.5px;
+          font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', Arial, sans-serif;
+          background: #ffffff;
+          color: #000000;
+          line-height: 1.6;
+          font-size: 14px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         .container {
           max-width: 794px; /* A4 width at 96dpi */
@@ -105,22 +106,86 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
         }
         .title h1 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
         .title p { font-size: 12px; color: #555; }
-  .main-table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 12px; }
-  .main-table th, .main-table td { padding: 8px 10px; border: 1px solid #ddd; vertical-align: top; }
-  .main-table th { background: #f6f6f6; text-align: left; width: 28%; font-weight: 600; }
-  .section-title { background: #efefef; text-align: left; font-size: 14.5px; font-weight: 700; padding: 8px 10px; }
-  .amount-box { display: flex; justify-content: flex-end; margin-top: 6px; }
-  .amount-table { width: 360px; border-collapse: collapse; }
-  .amount-table th, .amount-table td { padding: 8px 10px; border: 1px solid #ddd; }
-  .amount-table th { background: #f6f6f6; text-align: left; width: 60%; font-weight: 600; }
-  .amount-value { text-align: right; font-weight: 700; color: #111; }
-  .note { margin-top: 10px; color: #555; font-size: 12px; }
-  .amount-words { margin-top: 6px; font-size: 12px; color: #333; }
+  .main-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 12px; 
+    margin-bottom: 16px;
+    border: 2px solid #333;
+  }
+  .main-table th, .main-table td { 
+    padding: 10px 12px; 
+    border: 1px solid #333; 
+    vertical-align: top;
+    font-size: 13px;
+  }
+  .main-table th { 
+    background: #f0f0f0; 
+    text-align: left; 
+    width: 30%; 
+    font-weight: 700;
+    color: #000;
+  }
+  .section-title { 
+    background: #e0e0e0; 
+    text-align: left; 
+    font-size: 15px; 
+    font-weight: 700; 
+    padding: 10px 12px;
+    color: #000;
+    border: 1px solid #333 !important;
+  }
+  .amount-box { 
+    display: flex; 
+    justify-content: flex-end; 
+    margin-top: 16px;
+  }
+  .amount-table { 
+    width: 400px; 
+    border-collapse: collapse;
+    border: 2px solid #333;
+  }
+  .amount-table th, .amount-table td { 
+    padding: 12px 15px; 
+    border: 1px solid #333;
+    font-size: 14px;
+  }
+  .amount-table th { 
+    background: #f0f0f0; 
+    text-align: left; 
+    width: 60%; 
+    font-weight: 700;
+    color: #000;
+  }
+  .amount-value { 
+    text-align: right; 
+    font-weight: 700; 
+    color: #000;
+    font-size: 16px;
+  }
+  .note { 
+    margin-top: 16px; 
+    color: #333; 
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid #ddd;
+    padding: 10px;
+    background: #f9f9f9;
+  }
+  .amount-words { 
+    margin-top: 12px; 
+    font-size: 13px; 
+    color: #000;
+    font-weight: 600;
+    padding: 8px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+  }
   .signature { margin-top: 24px; display: flex; justify-content: flex-end; }
   .sign-block { width: 300px; text-align: center; }
-  .sign-line { margin-top: 36px; border-top: 1px solid #888; padding-top: 6px; }
+  .sign-line { margin-top: 8px; border-top: 1px solid #888; padding-top: 6px; }
   .timestamp { margin-top: 10px; font-size: 11px; color: #777; text-align: right; }
-        .sign-image { max-height: 64px; object-fit: contain; margin-bottom: 6px; }
+        .sign-image { max-height: 64px; object-fit: contain; margin-bottom: 2px; position: relative; top: 8px; }
       </style>
     </head>
     <body>
@@ -247,19 +312,39 @@ export async function generateServerPDFBuffer(donation: Donation, logoBase64?: s
     } catch {}
 
     const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(8000);
+    
+    // Set proper viewport for PDF rendering
+    await page.setViewport({ 
+      width: 794, 
+      height: 1123, 
+      deviceScaleFactor: 2 
+    });
+    
+    page.setDefaultNavigationTimeout(10000);
     const html = createReceiptHTML(donation, logoBase64, signature);
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    
+    // Wait for content to fully load
+    await page.setContent(html, { 
+      waitUntil: ['domcontentloaded', 'networkidle0'] 
+    });
+    
+    // Add small delay to ensure fonts are loaded
+    await page.waitForFunction(() => document.readyState === 'complete', {
+      timeout: 5000
+    });
     
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
+      preferCSSPageSize: false,
+      displayHeaderFooter: false,
       margin: {
-        top: '12mm',
-        right: '12mm',
-        bottom: '12mm',
-        left: '12mm'
-      }
+        top: '15mm',
+        right: '15mm',
+        bottom: '15mm',
+        left: '15mm'
+      },
+      scale: 1.0
     });
 
     await page.close();

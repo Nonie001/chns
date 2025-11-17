@@ -37,6 +37,11 @@ export default function AdminPage() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [previewDonation, setPreviewDonation] = useState<Donation | null>(null);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+  const [paginatedDonations, setPaginatedDonations] = useState<Donation[]>([]);
+
   useEffect(() => {
     // ตรวจสอบ Login ก่อน
     const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
@@ -74,7 +79,7 @@ export default function AdminPage() {
     }
   };
 
-  // Filter และ Search
+  // Filter, Search และ Pagination
   useEffect(() => {
     let filtered = donations;
 
@@ -95,7 +100,40 @@ export default function AdminPage() {
     }
 
     setFilteredDonations(filtered);
+    
+    // Reset to first page when filters change
+    setCurrentPage(1);
   }, [searchTerm, statusFilter, donations]);
+
+  // Pagination effect
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedDonations(filteredDonations.slice(startIndex, endIndex));
+  }, [filteredDonations, currentPage]);
+
+  // Pagination functions
+  const totalPages = Math.ceil(filteredDonations.length / itemsPerPage);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
+
+  const goToNextPage = () => {
+    if (hasNextPage) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (hasPrevPage) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   const handleDownloadPDF = async (donation: Donation) => {
     try {
@@ -340,7 +378,7 @@ export default function AdminPage() {
               <option value="rejected">ปฏิเสธ</option>
             </select>
             <span className="text-sm text-slate-700 whitespace-nowrap font-medium">
-              {filteredDonations.length} / {donations.length}
+              หน้า {currentPage} / {totalPages} ({filteredDonations.length} รายการ)
             </span>
           </div>
         </div>
@@ -362,14 +400,14 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredDonations.length === 0 ? (
+              {paginatedDonations.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-slate-600 text-sm font-medium">
                     {searchTerm || statusFilter !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลการบริจาค'}
                   </td>
                 </tr>
               ) : (
-                filteredDonations.map((donation) => (
+                paginatedDonations.map((donation) => (
                   <tr key={donation.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-slate-700">
                       {format(new Date(donation.created_at), 'dd/MM/yy', { locale: th })}
@@ -415,12 +453,12 @@ export default function AdminPage() {
 
         {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
-          {filteredDonations.length === 0 ? (
+          {paginatedDonations.length === 0 ? (
             <div className="bg-white border rounded-lg p-6 text-center text-slate-600 text-sm font-medium">
               {searchTerm || statusFilter !== 'all' ? 'ไม่พบข้อมูลที่ค้นหา' : 'ยังไม่มีข้อมูลการบริจาค'}
             </div>
           ) : (
-            filteredDonations.map((donation) => (
+            paginatedDonations.map((donation) => (
               <div key={donation.id} className="bg-white border rounded-lg p-3 shadow-sm">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1 min-w-0">
@@ -472,6 +510,73 @@ export default function AdminPage() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="bg-white border border-t-0 rounded-b-lg px-4 py-3 sm:px-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-slate-700">
+                แสดง {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredDonations.length)} จาก {filteredDonations.length} รายการ
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={goToPrevPage}
+                  disabled={!hasPrevPage}
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← ก่อนหน้า
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = currentPage <= 3 
+                      ? i + 1 
+                      : currentPage >= totalPages - 2 
+                        ? totalPages - 4 + i 
+                        : currentPage - 2 + i;
+                    
+                    if (page < 1 || page > totalPages) return null;
+                    
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-1 text-sm border rounded ${
+                          page === currentPage
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                  
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <span className="px-2 text-slate-500">...</span>
+                      <button
+                        onClick={() => goToPage(totalPages)}
+                        className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+                
+                <button
+                  onClick={goToNextPage}
+                  disabled={!hasNextPage}
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ถัดไป →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* PDF Preview Modal */}

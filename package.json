@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "analyze": "npm run build && npx @next/bundle-analyzer .next/",
+    "build:standalone": "next build && next export"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

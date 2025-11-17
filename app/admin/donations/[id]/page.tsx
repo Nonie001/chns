@@ -64,26 +64,52 @@ export default function DonationDetailPage() {
     try {
       console.log('Starting approval for donation:', donation.id);
       
+      // Add timeout for the request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 seconds
+      
       const response = await fetch('/api/donations/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ donationId: donation.id }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       console.log('Response status:', response.status);
+      console.log('Response OK:', response.ok);
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      console.log('Content-Type:', contentType);
+      
+      if (!contentType?.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(`เซิร์ฟเวอร์ตอบสนองผิดพลาด (${response.status})`);
+      }
       
       const result = await response.json();
       console.log('Response data:', result);
 
       if (!response.ok) {
-        throw new Error(result.error || result.details || 'Failed to approve donation');
+        throw new Error(result.error || result.details || `HTTP ${response.status}: Failed to approve donation`);
       }
 
       alert('อนุมัติและส่งใบเสร็จสำเร็จ');
       await fetchDonation();
     } catch (error) {
       console.error('Error approving donation:', error);
-      alert(`เกิดข้อผิดพลาด: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        alert('การอนุมัติใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง');
+      } else if (error instanceof SyntaxError) {
+        alert('เกิดข้อผิดพลาดในการสื่อสารกับเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง');
+      } else {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        alert(`เกิดข้อผิดพลาด: ${message}`);
+      }
     } finally {
       setProcessing(false);
     }

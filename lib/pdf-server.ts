@@ -79,10 +79,13 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>ใบเสร็จรับเงินบริจาค</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: 'Sarabun', 'Noto Sans Thai', 'Segoe UI', Arial, sans-serif;
+          font-family: 'Sarabun', 'Noto Sans Thai', 'Arial Unicode MS', Arial, sans-serif;
           background: #ffffff;
           color: #000000;
           line-height: 1.6;
@@ -333,6 +336,14 @@ export async function generateServerPDFBuffer(donation: Donation, logoBase64?: s
       timeout: 5000
     });
     
+    // Additional wait for Google Fonts to load
+    await page.waitForFunction(() => {
+      return document.fonts ? document.fonts.ready : true;
+    }, { timeout: 8000 });
+    
+    // Extra delay for font rendering
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -372,7 +383,12 @@ async function launchBrowser(): Promise<Browser> {
       '--disable-gpu',
       '--disable-dev-shm-usage',
       '--disable-setuid-sandbox',
-      '--no-sandbox'
+      '--no-sandbox',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor',
+      '--font-render-hinting=none',
+      '--disable-font-subpixel-positioning',
+      '--enable-font-antialiasing'
     ],
     defaultViewport: { width: 1280, height: 720 },
     executablePath: await chromium.executablePath(),

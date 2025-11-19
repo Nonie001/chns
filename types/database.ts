@@ -5,10 +5,11 @@ export interface Donation {
   first_name: string;
   last_name: string;
   email: string;
-  birth_date: string;
+  address: string;
   phone: string;
   receipt_url: string | null; // URL ของสลิป/หลักฐานการบริจาค
   amount: number;
+  purpose: string; // วัตถุประสงค์การบริจาค
   status: 'pending' | 'approved' | 'rejected';
   pdf_url: string | null; // URL ของใบเสร็จ PDF
   created_at: string;
@@ -36,8 +37,9 @@ export interface DonationFormData {
   firstName: string;
   lastName: string;
   email: string;
-  birthDate: string;
+  address: string;
   phone: string;
   amount: number;
+  purpose: string;
   receiptFile: File;
 }

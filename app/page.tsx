@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Upload, CheckCircle, Loader2, Mail } from 'lucide-react';
+import { Upload, CheckCircle, Loader2, Mail, MapPin, Heart } from 'lucide-react';
 import { donationSchema, type DonationInput } from '@/lib/validations';
 import { supabase } from '@/lib/supabase';
 
@@ -64,9 +64,10 @@ export default function Home() {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
-          birth_date: data.birth_date,
+          address: data.address,
           phone: data.phone,
           amount: data.amount,
+          purpose: data.purpose,
           receipt_url: publicUrl,
           status: 'pending',
         });
@@ -212,19 +213,20 @@ export default function Home() {
             </p>
           </div>
 
-          {/* วันเกิด - เบอร์โทร */}
+          {/* ที่อยู่ - เบอร์โทร */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1.5">
-                วันเกิด <span className="text-red-500">*</span>
+                ที่อยู่ <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                {...register('birth_date')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900"
+              <textarea
+                {...register('address')}
+                rows={3}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-500 resize-none"
+                placeholder="ที่อยู่ปัจจุบัน"
               />
-              {errors.birth_date && (
-                <p className="mt-1.5 text-sm text-red-600">{errors.birth_date.message}</p>
+              {errors.address && (
+                <p className="mt-1.5 text-sm text-red-600">{errors.address.message}</p>
               )}
             </div>
 
@@ -242,6 +244,36 @@ export default function Home() {
                 <p className="mt-1.5 text-sm text-red-600">{errors.phone.message}</p>
               )}
             </div>
+          </div>
+
+          {/* วัตถุประสงค์การบริจาค */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1.5">
+              วัตถุประสงค์การบริจาค <span className="text-red-500">*</span>
+            </label>
+            <select
+              {...register('purpose')}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900"
+            >
+              <option value="">เลือกวัตถุประสงค์การบริจาค</option>
+              <option value="เพื่อช่วยเหลือปาเลสไตน์">เพื่อช่วยเหลือปาเลสไตน์</option>
+              <option value="เพื่อช่วยเหลือภัยพิบัติฉุกเฉินภายในประเทศ">เพื่อช่วยเหลือภัยพิบัติฉุกเฉินภายในประเทศ</option>
+              <option value="เพื่อช่วยเหลือผู้ลี้ภัยในประเทศ">เพื่อช่วยเหลือผู้ลี้ภัยในประเทศ</option>
+              <option value="เพื่อซากาต">เพื่อซากาต</option>
+              <option value="เพื่อการบริหาร">เพื่อการบริหาร</option>
+              <option value="เพื่อสนับสนุนภารกิจ">เพื่อสนับสนุนภารกิจ</option>
+              <option value="เพื่อช่วยเหลือภัยพิบัติฉุกเฉินต่างประเทศ">เพื่อช่วยเหลือภัยพิบัติฉุกเฉินต่างประเทศ</option>
+              <option value="เพื่อช่วยเหลือผู้ลี้ภัยต่างประเทศ">เพื่อช่วยเหลือผู้ลี้ภัยต่างประเทศ</option>
+              <option value="เพื่อโครงการที่อยู่อาศัยผู้ยากไร้">เพื่อโครงการที่อยู่อาศัยผู้ยากไร้</option>
+              <option value="เพื่อช่วยเหลือพี่น้องซีเรีย">เพื่อช่วยเหลือพี่น้องซีเรีย</option>
+            </select>
+            {errors.purpose && (
+              <p className="mt-1.5 text-sm text-red-600">{errors.purpose.message}</p>
+            )}
+            <p className="mt-1.5 text-sm text-gray-600 flex items-center gap-1">
+              <Heart className="w-4 h-4" />
+              <span>เลือกวัตถุประสงค์ที่ท่านต้องการสนับสนุน</span>
+            </p>
           </div>
 
           {/* จำนวนเงิน */}

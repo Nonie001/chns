@@ -346,9 +346,15 @@ export default function DonationDetailPage() {
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-500 mb-1">วันเกิด</div>
+                <div className="text-sm text-gray-500 mb-1">ที่อยู่</div>
                 <div className="text-gray-900">
-                  {format(new Date(donation.birth_date), 'dd MMMM yyyy', { locale: th })}
+                  {donation.address}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500 mb-1">วัตถุประสงค์การบริจาค</div>
+                <div className="text-gray-900">
+                  {donation.purpose}
                 </div>
               </div>
               <div>

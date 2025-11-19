@@ -67,7 +67,6 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
   const receiptNo = donation.id.substring(0, 8).toUpperCase();
   const receiptDate = format(new Date(donation.created_at), 'dd MMMM yyyy', { locale: th });
   const receiptTime = format(new Date(donation.created_at), 'HH:mm น.', { locale: th });
-  const birthDate = format(new Date(donation.birth_date), 'dd MMMM yyyy', { locale: th });
   const amountText = donation.amount.toLocaleString('th-TH');
   const amountWords = thaiBahtText(donation.amount);
   const generatedDate = format(new Date(), 'dd/MM/yyyy เวลา HH:mm น.', { locale: th });
@@ -223,8 +222,8 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
             <td>${fullName}</td>
           </tr>
           <tr>
-            <th>วันเกิด</th>
-            <td>${birthDate}</td>
+            <th>ที่อยู่</th>
+            <td>${donation.address}</td>
           </tr>
           <tr>
             <th>อีเมล</th>
@@ -237,6 +236,10 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
 
           <tr>
             <th colspan="2" class="section-title">รายละเอียดการบริจาค</th>
+          </tr>
+          <tr>
+            <th>วัตถุประสงค์</th>
+            <td>${donation.purpose}</td>
           </tr>
           <tr>
             <th>วันที่บริจาค</th>

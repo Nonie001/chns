@@ -348,7 +348,10 @@ export default function DonationDetailPage() {
               <div>
                 <div className="text-sm text-gray-500 mb-1">ที่อยู่</div>
                 <div className="text-gray-900">
-                  {donation.address}
+                  {donation.province && donation.district && donation.address_detail ? 
+                    `${donation.address_detail} ${donation.district} ${donation.province}` :
+                    'ไม่ระบุ'
+                  }
                 </div>
               </div>
               <div>

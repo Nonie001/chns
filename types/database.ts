@@ -5,7 +5,9 @@ export interface Donation {
   first_name: string;
   last_name: string;
   email: string;
-  address: string;
+  province: string;
+  district: string;
+  address_detail: string;
   phone: string;
   receipt_url: string | null; // URL ของสลิป/หลักฐานการบริจาค
   amount: number;
@@ -37,7 +39,9 @@ export interface DonationFormData {
   firstName: string;
   lastName: string;
   email: string;
-  address: string;
+  province: string;
+  district: string;
+  address_detail: string;
   phone: string;
   amount: number;
   purpose: string;

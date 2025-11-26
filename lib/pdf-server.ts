@@ -69,7 +69,7 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
   const receiptTime = format(new Date(donation.created_at), 'HH:mm น.', { locale: th });
   const amountText = donation.amount.toLocaleString('th-TH');
   const amountWords = thaiBahtText(donation.amount);
-  const generatedDate = format(new Date(), 'dd/MM/yyyy เวลา HH:mm น.', { locale: th });
+  const generatedDate = format(new Date(donation.created_at), 'dd/MM/yyyy เวลา HH:mm น.', { locale: th });
 
   return `
     <!DOCTYPE html>
@@ -87,7 +87,7 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
           font-family: 'Sarabun', 'Noto Sans Thai', 'Arial Unicode MS', Arial, sans-serif;
           background: #ffffff;
           color: #000000;
-          line-height: 1.6;
+          line-height: 1.3;
           font-size: 14px;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
@@ -99,27 +99,43 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
         }
         .header {
           display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 16px;
+          margin-bottom: 8px;
         }
-        .brand { display: flex; align-items: center; gap: 12px; }
-        .brand img { width: 80px; height: auto; }
+        .brand { 
+          display: flex; 
+          align-items: center; 
+          gap: 12px; 
+        }
+        .brand img { 
+          height: 100px; 
+          width: auto; 
+          max-width: 350px; 
+          object-fit: contain;
+        }
+        .brand-info {
+          font-size: 11px;
+          color: #555;
+          line-height: 1.2;
+          margin-top: 5px;
+          max-width: 350px;
+        }
         .title {
           text-align: right;
         }
-        .title h1 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
-        .title p { font-size: 12px; color: #555; }
+        .title h1 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .title p { font-size: 11px; color: #555; }
   .main-table { 
     width: 100%; 
     border-collapse: collapse; 
     margin-top: 12px; 
     margin-bottom: 16px;
-    border: 2px solid #333;
+    border: 1px solid #ccc;
   }
   .main-table th, .main-table td { 
-    padding: 10px 12px; 
-    border: 1px solid #333; 
+    padding: 6px 10px; 
+    border: 1px solid #ddd; 
     vertical-align: top;
-    font-size: 13px;
+    font-size: 12px;
   }
   .main-table th { 
     background: #f0f0f0; 
@@ -129,13 +145,13 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
     color: #000;
   }
   .section-title { 
-    background: #e0e0e0; 
+    background: #f5f5f5; 
     text-align: left; 
-    font-size: 15px; 
+    font-size: 13px; 
     font-weight: 700; 
-    padding: 10px 12px;
+    padding: 6px 10px;
     color: #000;
-    border: 1px solid #333 !important;
+    border: 1px solid #ddd !important;
   }
   .amount-box { 
     display: flex; 
@@ -145,12 +161,12 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
   .amount-table { 
     width: 400px; 
     border-collapse: collapse;
-    border: 2px solid #333;
+    border: 1px solid #ccc;
   }
   .amount-table th, .amount-table td { 
-    padding: 12px 15px; 
-    border: 1px solid #333;
-    font-size: 14px;
+    padding: 8px 12px; 
+    border: 1px solid #ddd;
+    font-size: 12px;
   }
   .amount-table th { 
     background: #f0f0f0; 
@@ -163,23 +179,22 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
     text-align: right; 
     font-weight: 700; 
     color: #000;
-    font-size: 16px;
+    font-size: 14px;
   }
   .note { 
-    margin-top: 16px; 
+    margin-top: 12px; 
     color: #333; 
     font-size: 12px;
-    line-height: 1.5;
-    border: 1px solid #ddd;
-    padding: 10px;
-    background: #f9f9f9;
+    line-height: 1.3;
+    padding: 8px 0;
+    background: transparent;
   }
   .amount-words { 
-    margin-top: 12px; 
+    margin-top: 10px; 
     font-size: 13px; 
     color: #000;
     font-weight: 600;
-    padding: 8px;
+    padding: 6px;
     background: #f5f5f5;
     border: 1px solid #ddd;
   }
@@ -195,15 +210,15 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
         <div class="header">
           <div class="brand">
             ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" />` : ''}
-            <div>
-              <div style="font-size:14px;font-weight:700;color:#111;">ใบเสร็จรับเงินบริจาค</div>
-              <div style="font-size:11px;color:#666;">Donation Receipt</div>
-            </div>
           </div>
           <div class="title">
             <h1>เลขที่: ${receiptNo}</h1>
             <p>ออกเอกสาร: ${receiptDate} เวลา ${receiptTime}</p>
           </div>
+        </div>
+        <div style="text-align: center; margin-bottom: 15px; padding: 2px 0; border-bottom: 1px solid #ddd;">
+          <div style="font-size:18px;font-weight:700;color:#111; margin-bottom: 2px;">ใบเสร็จรับเงินบริจาค</div>
+          <div style="font-size:13px;color:#666;">Donation Receipt</div>
         </div>
         <table class="main-table">
           <tr>
@@ -223,7 +238,7 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
           </tr>
           <tr>
             <th>ที่อยู่</th>
-            <td>${donation.address}</td>
+            <td>${donation.address_detail}, ${donation.district}, ${donation.province}</td>
           </tr>
           <tr>
             <th>อีเมล</th>
@@ -241,11 +256,8 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
             <th>วัตถุประสงค์</th>
             <td>${donation.purpose}</td>
           </tr>
-          <tr>
-            <th>วันที่บริจาค</th>
-            <td>${receiptDate} เวลา ${receiptTime}</td>
-          </tr>
         </table>
+
         <div class="amount-box">
           <table class="amount-table">
             <tr>
@@ -262,7 +274,7 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
         <div class="amount-words">จำนวนเงิน (ตัวอักษร): ${amountWords}</div>
 
         <div class="note">
-          ใบเสร็จฉบับนี้ออกโดยระบบอัตโนมัติ เพื่อใช้เป็นหลักฐานการบริจาค และสามารถใช้ประกอบการยื่นภาษีได้ตามระเบียบที่เกี่ยวข้อง
+          ใบเสร็จรับเงินบริจาคฉบับนี้ออกโดยระบบอัตโนมัติ เพื่อใช้เป็นหลักฐานการรับเงินบริจาคและการสนับสนุนกิจกรรมสาธารณประโยชน์ ขอขอบพระคุณท่านที่ได้ให้การสนับสนุนและร่วมเป็นส่วนหนึ่งในการพัฒนาสังคมและชุมชน เงินบริจาคของท่านจะถูกนำไปใช้อย่างโปร่งใสและเป็นประโยชน์สูงสุดต่อการดำเนินกิจกรรมตามวัตถุประสงค์ที่ได้ระบุไว้
         </div>
 
         <div class="signature">
@@ -274,6 +286,12 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
           </div>
         </div>
 
+        <div style="margin-top: 20px; padding: 10px; border-top: 1px solid #ddd; font-size: 11px; color: #666; line-height: 1.3;">
+          ถนนคลองเก้า แขวงคลองสิบ เขตหนองจอก กรุงเทพมหานคร<br>
+          Klongkao Rd., Klongsib, Nongchok, Bangkok Thailand<br>
+          Tel: 0-2949-4278, 0-2949-4288, 0-2949-4312 Fax: 0-2949-4220
+        </div>
+
         <div class="timestamp">พิมพ์เมื่อ: ${generatedDate}</div>
       </div>
     </body>
@@ -281,7 +299,7 @@ function createReceiptHTML(donation: Donation, logoBase64?: string, signature?: 
   `;
 }
 
-export async function generateServerPDFBuffer(donation: Donation, logoBase64?: string): Promise<Buffer> {
+export async function generateServerPDFBuffer(donation: Donation): Promise<Buffer> {
   const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
   let browser;
   
@@ -292,6 +310,20 @@ export async function generateServerPDFBuffer(donation: Donation, logoBase64?: s
     } else {
       // Local: ใช้ singleton browser เพื่อความเร็ว
       browser = await getBrowser();
+    }
+
+    // Load logo from public folder
+    let logoBase64: string | undefined;
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const logoPath = path.join(process.cwd(), 'public', 'pdf', 'logo-pdf.jpg');
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        logoBase64 = `data:image/jpeg;base64,${logoBuffer.toString('base64')}`;
+      }
+    } catch (error) {
+      console.warn('Could not load logo:', error);
     }
 
     // Load signer settings

@@ -6,7 +6,9 @@ export const donationSchema = z.object({
   last_name: z.string().min(1, 'กรุณากรอกนามสกุล'),
   email: z.string().email('กรุณากรอกอีเมลที่ถูกต้อง'),
   phone: z.string().min(10, 'กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง'),
-  address: z.string().min(1, 'กรุณากรอกที่อยู่'),
+  province: z.string().min(1, 'กรุณาเลือกจังหวัด'),
+  district: z.string().min(1, 'กรุณาเลือกอำเภอ/เขต'),
+  address_detail: z.string().min(1, 'กรุณากรอกรายละเอียดที่อยู่'),
   purpose: z.string().min(1, 'กรุณาเลือกวัตถุประสงค์การบริจาค'),
   amount: z.number().min(1, 'กรุณากรอกจำนวนเงินที่ต้องการบริจาค')
 });

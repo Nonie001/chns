@@ -1,26 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import dynamic from 'next/dynamic';
 import { Upload, CheckCircle, Loader2, Mail, MapPin, Heart } from 'lucide-react';
 import { donationSchema, type DonationInput } from '@/lib/validations';
 import { supabase } from '@/lib/supabase';
+import { 
+  getAllProvinces, 
+  getAmphoesByProvince, 
+  getDistrictsByAmphoe,
+  parseAddressValue,
+  type AddressOption 
+} from '@/lib/thai-address';
+
+// Dynamic import to avoid hydration issues
+const Select = dynamic(() => import('react-select'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-11 bg-gray-50 border border-gray-300 rounded-lg animate-pulse"></div>
+  ),
+});
 
 export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  
+  // Address selection states
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedAmphoe, setSelectedAmphoe] = useState('');
+  const [amphoeOptions, setAmphoeOptions] = useState<AddressOption[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<AddressOption[]>([]);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<DonationInput>({
     resolver: zodResolver(donationSchema),
   });
+
+  // Fix hydration issues
+  useEffect(() => {
+    setIsClient(true);
+    // Debug: ตรวจสอบข้อมูลจังหวัด
+    const provinces = getAllProvinces();
+    console.log('Available provinces:', provinces.length, provinces.slice(0, 5));
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -31,13 +63,65 @@ export default function Home() {
     }
   };
 
+  // Handle province selection
+  const handleProvinceChange = (newValue: unknown) => {
+    const option = newValue as { value: string; label: string } | null;
+    const provinceName = option?.value || '';
+    console.log('Province selected:', provinceName);
+    
+    setSelectedProvince(provinceName);
+    setSelectedAmphoe('');
+    setValue('province', provinceName);
+    setValue('district', '');
+    setValue('address_detail', '');
+    
+    if (provinceName) {
+      // Get amphoes for selected province
+      const amphoes = getAmphoesByProvince(provinceName);
+      console.log('Amphoes for', provinceName, ':', amphoes.length);
+      setAmphoeOptions(amphoes);
+      setDistrictOptions([]);
+    } else {
+      setAmphoeOptions([]);
+      setDistrictOptions([]);
+    }
+  };
+
+  // Handle amphoe selection
+  const handleAmphoeChange = (newValue: unknown) => {
+    const option = newValue as { value: string; label: string } | null;
+    const amphoeName = option?.label || '';
+    const amphoeValue = option?.value || '';
+    setSelectedAmphoe(amphoeName);
+    setValue('district', amphoeName);
+    setValue('address_detail', '');
+    
+    if (amphoeName && selectedProvince) {
+      // Get districts for selected amphoe and province
+      const districts = getDistrictsByAmphoe(amphoeName, selectedProvince);
+      setDistrictOptions(districts);
+    } else {
+      setDistrictOptions([]);
+    }
+  };
+
+  // Handle district selection
+  const handleDistrictChange = (newValue: unknown) => {
+    const option = newValue as { value: string; label: string } | null;
+    const districtValue = option?.value || '';
+    const addressData = parseAddressValue(districtValue);
+    if (addressData) {
+      setValue('address_detail', `${addressData.district}, ${addressData.amphoe}, ${addressData.province} ${addressData.zipcode}`);
+    }
+  };
+
   const onSubmit = async (data: DonationInput) => {
     if (!receiptFile) {
       alert('กรุณาแนบหลักฐานการบริจาค');
       return;
     }
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
     try {
       // Upload receipt file to Supabase Storage
@@ -64,7 +148,9 @@ export default function Home() {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
-          address: data.address,
+          province: data.province,
+          district: data.district,
+          address_detail: data.address_detail,
           phone: data.phone,
           amount: data.amount,
           purpose: data.purpose,
@@ -78,13 +164,22 @@ export default function Home() {
       reset();
       setReceiptFile(null);
       setPreviewUrl(null);
+      setSelectedProvince('');
+      setSelectedAmphoe('');
+      setAmphoeOptions([]);
+      setDistrictOptions([]);
 
       setTimeout(() => {
         setIsSuccess(false);
       }, 5000);
     } catch (error) {
       console.error('Error submitting donation:', error);
-      alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
+      if (error && typeof error === 'object' && 'message' in error) {
+        console.error('Detailed error:', error);
+        alert(`เกิดข้อผิดพลาด: ${error.message}`);
+      } else {
+        alert('เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -141,6 +236,7 @@ export default function Home() {
               </div>
             </div>
           )}
+
           {/* คำนำหน้า */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-1.5">
@@ -213,37 +309,139 @@ export default function Home() {
             </p>
           </div>
 
-          {/* ที่อยู่ - เบอร์โทร */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* ที่อยู่ */}
+          <div className="space-y-4" suppressHydrationWarning>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* จังหวัด */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  จังหวัด <span className="text-red-500">*</span>
+                </label>
+                {!isClient ? (
+                  <div className="w-full h-11 bg-gray-50 border border-gray-300 rounded-lg animate-pulse"></div>
+                ) : (
+                  <Select
+                    value={selectedProvince ? { value: selectedProvince, label: selectedProvince } : null}
+                    onChange={handleProvinceChange}
+                    options={getAllProvinces()}
+                    placeholder="เลือกจังหวัด"
+                    isClearable
+                    className="text-sm"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '44px',
+                        backgroundColor: '#f9fafb',
+                        borderColor: '#d1d5db',
+                        fontSize: '16px'
+                      })
+                    }}
+                  />
+                )}
+                {errors.province && (
+                  <p className="mt-1.5 text-sm text-red-600">{errors.province.message}</p>
+                )}
+              </div>
+
+              {/* อำเภอ/เขต */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1.5">
+                  อำเภอ/เขต <span className="text-red-500">*</span>
+                </label>
+                {!isClient ? (
+                  <div className="w-full h-11 bg-gray-50 border border-gray-300 rounded-lg animate-pulse"></div>
+                ) : (
+                  <Select
+                    value={selectedAmphoe ? amphoeOptions.find(o => o.label === selectedAmphoe) : null}
+                    onChange={handleAmphoeChange}
+                    options={amphoeOptions}
+                    placeholder="เลือกอำเภอ/เขต"
+                    isClearable
+                    isDisabled={!selectedProvince}
+                    className="text-sm"
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '44px',
+                        backgroundColor: '#f9fafb',
+                        borderColor: '#d1d5db',
+                        fontSize: '16px'
+                      })
+                    }}
+                  />
+                )}
+                {errors.district && (
+                  <p className="mt-1.5 text-sm text-red-600">{errors.district.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* ตำบล/แขวง */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1.5">
-                ที่อยู่ <span className="text-red-500">*</span>
+                ตำบล/แขวง และรหัสไปรษณีย์
               </label>
-              <textarea
-                {...register('address')}
-                rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-500 resize-none"
-                placeholder="ที่อยู่ปัจจุบัน"
-              />
-              {errors.address && (
-                <p className="mt-1.5 text-sm text-red-600">{errors.address.message}</p>
+              {!isClient ? (
+                <div className="w-full h-11 bg-gray-50 border border-gray-300 rounded-lg animate-pulse"></div>
+              ) : (
+                <Select
+                  options={districtOptions}
+                  onChange={handleDistrictChange}
+                  placeholder="เลือกตำบล/แขวง"
+                  isClearable
+                  isDisabled={districtOptions.length === 0}
+                  className="text-sm"
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: '44px',
+                      backgroundColor: '#f9fafb',
+                      borderColor: '#d1d5db',
+                      fontSize: '16px'
+                    })
+                  }}
+                />
               )}
             </div>
 
+            {/* รายละเอียดที่อยู่ */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1.5">
-                เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+                รายละเอียดที่อยู่เพิ่มเติม <span className="text-red-500">*</span>
               </label>
-              <input
-                type="tel"
-                {...register('phone')}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-500"
-                placeholder="0812345678"
+              <textarea
+                {...register('address_detail')}
+                rows={3}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-500 resize-none ${
+                  districtOptions.length === 0 ? 'bg-gray-100 cursor-not-allowed' : 'bg-gray-50'
+                }`}
+                placeholder="เลขที่บ้าน ชื่อหมู่บ้าน ซอย ถนน (ข้อมูลตำบลและรหัสไปรษณีย์จะถูกเลือกจากด้านบน)"
+                disabled={districtOptions.length === 0}
               />
-              {errors.phone && (
-                <p className="mt-1.5 text-sm text-red-600">{errors.phone.message}</p>
+              {errors.address_detail && (
+                <p className="mt-1.5 text-sm text-red-600">{errors.address_detail.message}</p>
               )}
+              <p className="mt-1.5 text-sm text-gray-600 flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                <span>เลือกจังหวัด → อำเภอ → ตำบล แล้วกรอกรายละเอียดเพิ่มเติม</span>
+              </p>
             </div>
+          </div>
+
+          {/* เบอร์โทรศัพท์ */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1.5">
+              เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              {...register('phone')}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-base text-gray-900 placeholder:text-gray-500"
+              placeholder="0812345678"
+            />
+            {errors.phone && (
+              <p className="mt-1.5 text-sm text-red-600">{errors.phone.message}</p>
+            )}
           </div>
 
           {/* วัตถุประสงค์การบริจาค */}

@@ -303,6 +303,10 @@ export async function generateServerPDFBuffer(donation: Donation): Promise<Buffe
   const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME;
   let browser;
   
+  // Set timeout for Vercel
+  const startTime = Date.now();
+  const maxDuration = isVercel ? 25000 : 60000; // 25 seconds for Vercel, 60 for local
+  
   try {
     // สร้าง browser ใหม่ทุกครั้งบน Vercel เพื่อประหยัด memory
     if (isVercel) {
@@ -358,26 +362,31 @@ export async function generateServerPDFBuffer(donation: Donation): Promise<Buffe
       deviceScaleFactor: 2 
     });
     
-    page.setDefaultNavigationTimeout(10000);
+    page.setDefaultNavigationTimeout(5000);
     const html = createReceiptHTML(donation, logoBase64, signature);
     
-    // Wait for content to fully load
+    // Wait for content to fully load with reduced timeout
     await page.setContent(html, { 
-      waitUntil: ['domcontentloaded', 'networkidle0'] 
+      waitUntil: ['domcontentloaded'] 
     });
     
     // Add small delay to ensure fonts are loaded
     await page.waitForFunction(() => document.readyState === 'complete', {
-      timeout: 5000
+      timeout: 3000
     });
     
     // Additional wait for Google Fonts to load
     await page.waitForFunction(() => {
       return document.fonts ? document.fonts.ready : true;
-    }, { timeout: 8000 });
+    }, { timeout: 3000 });
     
-    // Extra delay for font rendering
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Reduced delay for font rendering
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Check if we're approaching timeout
+    if (Date.now() - startTime > maxDuration - 5000) {
+      throw new Error('PDF generation timeout approaching');
+    }
     
     const pdfBuffer = await page.pdf({
       format: 'A4',

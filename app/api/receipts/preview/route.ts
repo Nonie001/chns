@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const pdfBuffer = await generateServerPDFBuffer(donation, logoBase64);
+    const pdfBuffer = await generateServerPDFBuffer(donation);
     return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {

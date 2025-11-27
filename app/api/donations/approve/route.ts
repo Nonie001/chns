@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     console.log('Generating PDF...');
     let pdfBuffer: Buffer;
     try {
-      pdfBuffer = await generateServerPDFBuffer(donation as Donation, logoBase64);
+      pdfBuffer = await generateServerPDFBuffer(donation as Donation);
       console.log('PDF buffer created, size:', pdfBuffer.length, 'bytes');
     } catch (pdfError) {
       console.error('PDF generation error:', pdfError);
